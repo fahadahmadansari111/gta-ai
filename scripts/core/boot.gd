@@ -16,11 +16,20 @@ var _main_city: Node
 
 func _ready() -> void:
 	Engine.max_fps = target_fps
-	# Connect autoloads (GameState assumed as /root autoload singleton).
-	# TODO: GameState.state_changed.connect(...) once autoload signal lands.
-	if get_node_or_null("/root/GameState") == null:
-		push_warning("[Boot] GameState autoload not found; continuing without it.")
+	# Autoload singleton is named "Game" (see project.godot [autoload]).
+	var game: Node = get_node_or_null("/root/Game")
+	if game == null:
+		push_warning("[Boot] Game autoload not found; continuing without it.")
+	else:
+		var st: Variant = game.get("state")
+		if st is Object and (st as Object).has_signal("state_changed"):
+			(st as Object).connect("state_changed", _on_game_state_changed)
 	call_deferred("_load_main_city")
+
+
+func _on_game_state_changed(previous: int, next: int) -> void:
+	# TODO Phase 2: route BUSTED/WASTED to respawn UI, MISSION to HUD mode.
+	pass
 
 
 func _load_main_city() -> void:
