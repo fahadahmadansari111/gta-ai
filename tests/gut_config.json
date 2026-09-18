@@ -1,0 +1,7 @@
+{
+  "dirs": ["res://tests/"],
+  "prefix": "test_",
+  "suffix": ".gd",
+  "log_level": 1,
+  "note": "Optional GUT configuration. The primary headless runner needs no addon: godot --headless --script tests/test_runner.gd"
+}

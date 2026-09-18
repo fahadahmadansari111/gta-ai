@@ -1,0 +1,29 @@
+{
+  "id": "M01_Neon_Delivery",
+  "title": "Neon Delivery",
+  "description": "Rico needs a package picked up on the Ocean Drive neon strip and delivered to the Malibu Club before the crowd thins out. Grab the Comet parked out front and don't scratch it.",
+  "objectives": [
+    {
+      "type": "GoTo",
+      "targetId": "neon_strip_pickup",
+      "radius": 3.0
+    },
+    {
+      "type": "Collect",
+      "itemId": "neon_package",
+      "count": 1
+    },
+    {
+      "type": "Deliver",
+      "destinationId": "malibu_club_dropoff",
+      "vehicleId": null
+    }
+  ],
+  "rewards": {
+    "money": 500
+  },
+  "startCondition": {
+    "requiredMissionId": null
+  },
+  "timeLimitSec": 300
+}

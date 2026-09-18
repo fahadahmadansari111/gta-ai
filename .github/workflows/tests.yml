@@ -1,0 +1,28 @@
+name: tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  godot-tests:
+    name: Godot headless tests (no addons)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Godot 4.3
+        # Alternative equivalent: run the job inside the
+        # barichello/godot-ci:4.3 container image instead of this action.
+        uses: chickensoft-games/setup-godot@v1
+        with:
+          version: 4.3.0
+          use-dotnet: false
+
+      - name: Import project (best-effort script class cache)
+        run: godot --headless --import || echo "import skipped (no project.godot yet)"
+
+      - name: Run headless test runner (fails on assert)
+        # test_runner.gd quits non-zero on any FAIL, which fails this step.
+        run: godot --headless --script tests/test_runner.gd

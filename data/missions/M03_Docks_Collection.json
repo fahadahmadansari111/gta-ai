@@ -1,0 +1,29 @@
+{
+  "id": "M03_Docks_Collection",
+  "title": "Docks Collection",
+  "description": "A shipment went sideways at Viceport Docks. Slip past the night shift, collect 3 cargo crates, and haul them to the boatyard warehouse. Cortez is watching the clock.",
+  "objectives": [
+    {
+      "type": "GoTo",
+      "targetId": "viceport_docks_gate",
+      "radius": 4.0
+    },
+    {
+      "type": "Collect",
+      "itemId": "cargo_crate",
+      "count": 3
+    },
+    {
+      "type": "Deliver",
+      "destinationId": "boatyard_warehouse",
+      "vehicleId": null
+    }
+  ],
+  "rewards": {
+    "money": 1200
+  },
+  "startCondition": {
+    "requiredMissionId": "M02_Beach_Chase"
+  },
+  "timeLimitSec": 420
+}

@@ -1,0 +1,16 @@
+# Godot 4 — standard ignores
+.godot/
+builds/
+*.translation
+android/build/
+.export_credentials
+
+# Export / keystore material (never commit signing keys)
+*.keystore
+*.jks
+export_credentials.cfg
+
+# Logs / OS noise
+*.log
+.DS_Store
+Thumbs.db

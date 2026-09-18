@@ -1,0 +1,27 @@
+{
+  "id": "M02_Beach_Chase",
+  "title": "Beach Chase",
+  "description": "Rival wheelmen are running contraband down Vice Beach on Sanchez bikes. Smoke through the checkpoint-lined boardwalk course, then take out the beach rivals before they reach the pier.",
+  "objectives": [
+    {
+      "type": "RaceCheckpoint",
+      "checkpointIndex": 0
+    },
+    {
+      "type": "RaceCheckpoint",
+      "checkpointIndex": 1
+    },
+    {
+      "type": "Kill",
+      "targetId": "beach_rival",
+      "count": 2
+    }
+  ],
+  "rewards": {
+    "money": 750
+  },
+  "startCondition": {
+    "requiredMissionId": "M01_Neon_Delivery"
+  },
+  "timeLimitSec": 240
+}

@@ -1,0 +1,125 @@
+name: android
+
+# Godot Android pipeline.
+# Contrast with the Unity repo (gta-ai/.github/workflows/android-apk.yml):
+# NO license secrets are needed here — no UNITY_LICENSE / UNITY_EMAIL /
+# UNITY_PASSWORD. Godot and its export templates are free; CI signing uses an
+# auto-generated debug keystore (optional release secrets can be added later
+# without changing this flow).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.3.0
+
+jobs:
+  tests:
+    name: Godot headless tests (gate for build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Godot 4.3
+        uses: chickensoft-games/setup-godot@v1
+        with:
+          version: 4.3.0
+          use-dotnet: false
+      - name: Import project (best-effort script class cache)
+        run: godot --headless --import || echo "import skipped (no project.godot yet)"
+      - name: Run headless test runner (fails on assert)
+        run: godot --headless --script tests/test_runner.gd
+
+  build-android:
+    name: Export Android APK/AAB with Godot
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform + build-tools
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+
+      - name: Setup Godot 4.3
+        uses: chickensoft-games/setup-godot@v1
+        with:
+          version: 4.3.0
+          use-dotnet: false
+
+      - name: Cache Godot export templates (~1GB)
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates
+          key: godot-templates-4.3.0
+          restore-keys: |
+            godot-templates-
+
+      - name: Install export templates
+        run: |
+          TPL_DIR="$HOME/.local/share/godot/export_templates/4.3.stable"
+          if [ ! -f "$TPL_DIR/android_release.apk" ]; then
+            curl -fL -o /tmp/templates.tpz "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz"
+            mkdir -p "$TPL_DIR"
+            unzip -o /tmp/templates.tpz -d "$TPL_DIR"
+          fi
+          ls -lh "$TPL_DIR" | head -20
+
+      - name: Auto-generate debug keystore (no license secrets needed)
+        # Unlike Unity (UNITY_LICENSE), Godot signs debug exports with a plain
+        # debug keystore — generated here when missing.
+        run: |
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            mkdir -p "$HOME/.android"
+            keytool -genkey -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: Export release APK
+        # Requires the "Android" preset in export_presets.cfg (owned by the
+        # export/preset agent). Debug keystore signs it; no Unity license.
+        run: |
+          mkdir -p builds
+          godot --headless --export-release "Android" builds/game.apk 2>&1 | tee export.log
+
+      - name: Export release AAB (when preset exists)
+        run: |
+          if grep -q '"Android AAB"' export_presets.cfg 2>/dev/null; then
+            godot --headless --export-release "Android AAB" builds/game.aab 2>&1 | tee -a export.log
+          else
+            echo "Skipping AAB: no 'Android AAB' preset in export_presets.cfg" | tee -a export.log
+          fi
+
+      - name: List build output
+        if: always()
+        run: ls -lh builds/ || echo "no builds/ output"
+
+      - name: Upload APK+AAB artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-android-${{ github.sha }}
+          path: |
+            builds/*.apk
+            builds/*.aab
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload export log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-export-log-${{ github.sha }}
+          path: export.log
+          if-no-files-found: ignore
+          retention-days: 7
