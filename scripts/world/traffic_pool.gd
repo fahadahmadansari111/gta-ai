@@ -21,7 +21,7 @@ func _ready() -> void:
 
 ## Instantiate all pooled actors once, hidden, under the pool root.
 func prewarm() -> void:
-	var n: int = clampi(max_active, 1, SpawnPool.MAX_TRAFFIC_ACTORS)
+	var n: int = clampi(max_active, 1, SpawnPool.MAX_TRAFFIC)
 	var root: Node = get_node_or_null(pool_root_path) if not pool_root_path.is_empty() else self
 	if root == null:
 		root = self
@@ -77,5 +77,6 @@ func despawn(actor: Node3D) -> void:
 
 
 ## Pure-logic occupancy (mirrors visible pooled actors).
+## NOTE: SpawnPool.active_count is an int property, not a method.
 func active_count() -> int:
-	return _pool.active_count()
+	return _pool.active_count

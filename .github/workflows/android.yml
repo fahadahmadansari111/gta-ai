@@ -90,13 +90,23 @@ jobs:
 
       - name: Install export templates
         run: |
+          set -euo pipefail
           TPL_DIR="$HOME/.local/share/godot/export_templates/4.3.stable"
           if [ ! -f "$TPL_DIR/android_release.apk" ]; then
             curl -fL -o /tmp/templates.tpz "https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz"
             mkdir -p "$TPL_DIR"
             unzip -o /tmp/templates.tpz -d "$TPL_DIR"
+            # tpz sometimes nests files one level deep — flatten if so.
+            if [ ! -f "$TPL_DIR/android_release.apk" ]; then
+              nested="$(find "$TPL_DIR" -name 'android_release.apk' -print -quit)"
+              if [ -n "$nested" ]; then
+                mv "$(dirname "$nested")"/* "$TPL_DIR"/
+              fi
+            fi
           fi
-          ls -lh "$TPL_DIR" | head -20
+          ls "$TPL_DIR" | head -30
+          test -f "$TPL_DIR/android_release.apk" || { echo "::error::android_release.apk missing after install"; exit 1; }
+          test -f "$TPL_DIR/android_debug.apk" || { echo "::error::android_debug.apk missing after install"; exit 1; }
 
       - name: Auto-generate debug keystore (no license secrets needed)
         # Unlike Unity (UNITY_LICENSE), Godot signs debug exports with a plain
@@ -110,12 +120,16 @@ jobs:
       - name: Export release APK
         # Requires the "Android" preset in export_presets.cfg (owned by the
         # export/preset agent). Debug keystore signs it; no Unity license.
+        # pipefail: without it `| tee` swallows godot's exit code and a
+        # failed export would still mark the step green.
         run: |
+          set -o pipefail
           mkdir -p builds
           godot --headless --export-release "Android" builds/game.apk 2>&1 | tee export.log
 
       - name: Export release AAB (when preset exists)
         run: |
+          set -o pipefail
           if grep -q '"Android AAB"' export_presets.cfg 2>/dev/null; then
             godot --headless --export-release "Android AAB" builds/game.aab 2>&1 | tee -a export.log
           else

@@ -56,19 +56,22 @@ func _physics_process(delta: float) -> void:
 		wish = wish.normalized()
 
 	var target_speed: float = speed * PlayerMoveMath.sprint_multiplier(sprinting, sprint_mult)
-	var step: Vector3 = PlayerMoveMath.move_step(
-		planar_velocity, Vector2(wish.x, wish.z),
+	# PlayerMoveMath.move_step(pos, vel, input, speed, accel, friction, dt)
+	# returns {"pos": Vector2, "vel": Vector2}; the body position is owned by
+	# move_and_slide, so only the velocity part is consumed here.
+	var step: Dictionary = PlayerMoveMath.move_step(
+		Vector2.ZERO, planar_velocity, Vector2(wish.x, wish.z),
 		target_speed, accel, friction, delta)
-	planar_velocity = Vector2(step.x, step.z)
+	planar_velocity = step["vel"] as Vector2
 
-	# Gravity + jump integration (delegates constants to PlayerMoveMath).
+	# Gravity + jump (plain integration; no Math helper in this port).
 	if is_on_floor():
 		if vertical_velocity < 0.0:
 			vertical_velocity = -0.5
 		if Input.is_action_just_pressed("jump"):
-			vertical_velocity = PlayerMoveMath.jump_velocity(jump_velocity)
+			vertical_velocity = jump_velocity
 	else:
-		vertical_velocity = PlayerMoveMath.apply_gravity(vertical_velocity, gravity, delta)
+		vertical_velocity -= gravity * delta
 
 	velocity = Vector3(planar_velocity.x, vertical_velocity, planar_velocity.y)
 	move_and_slide()

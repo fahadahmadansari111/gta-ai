@@ -18,6 +18,8 @@ var definition: MissionDefinition
 var runtime: MissionRuntime
 
 var _hud: MissionHUD
+var _last_status: int = -1
+var _last_index: int = -1
 
 
 func _ready() -> void:
@@ -31,6 +33,17 @@ func _process(delta: float) -> void:
 	if runtime == null:
 		return
 	runtime.update(delta)
+	# MissionRuntime is signal-free pure logic: detect transitions by polling.
+	var st: int = runtime.status
+	if st != _last_status:
+		_last_status = st
+		if st == MissionRuntime.Status.PASSED:
+			_on_runtime_passed(mission_id)
+		elif st == MissionRuntime.Status.FAILED:
+			_on_runtime_failed(mission_id, "Mission failed")
+	if runtime.current_index != _last_index:
+		_last_index = runtime.current_index
+		_on_runtime_objective_changed(_objective_label())
 	_push_hud()
 
 
@@ -50,16 +63,16 @@ func start_mission(id: String) -> bool:
 		return false
 	definition = MissionDefinition.from_dict(parsed)
 	runtime = MissionRuntime.new(definition)
-	runtime.mission_passed.connect(_on_runtime_passed)
-	runtime.mission_failed.connect(_on_runtime_failed)
-	runtime.objective_changed.connect(_on_runtime_objective_changed)
 	runtime.start()
+	_last_status = -1
+	_last_index = -1
 	return true
 
 
-## Manual event feed for UI buttons / tests.
-func feed_event(evt: ObjectiveEvent) -> bool:
-	if runtime == null or evt == null:
+## Manual event feed for UI buttons / tests. Events are plain Dictionaries,
+## e.g. MissionEvents.arrived(target_id).
+func feed_event(evt: Dictionary) -> bool:
+	if runtime == null or evt.is_empty():
 		return false
 	return runtime.advance_on_event(evt)
 
@@ -84,14 +97,41 @@ func _on_trigger_body_entered(_body: Node3D, area: Area3D) -> void:
 		return
 	# Convention: trigger Area3D node name == target_id.
 	var target_id: String = area.name
-	runtime.advance_on_event(ArrivedEvent.new(target_id))
+	runtime.advance_on_event(MissionEvents.arrived(target_id))
+
+
+## Human-readable label for the current objective, e.g. "GoTo gate (1/3)".
+func _objective_label() -> String:
+	if runtime == null or runtime.definition == null:
+		return ""
+	var total: int = runtime.definition.objectives.size()
+	var cur: MissionObjective = runtime.current_objective()
+	if cur == null:
+		return "Done (%d/%d)" % [mini(runtime.current_index, total), total]
+	var base: String = cur.objective_type()
+	match cur.kind:
+		MissionObjective.Kind.GO_TO:
+			base += " " + cur.target_id
+		MissionObjective.Kind.KILL:
+			base += " %s x%d" % [cur.target_id, cur.count]
+		MissionObjective.Kind.COLLECT:
+			base += " %s x%d" % [cur.item_id, cur.count]
+		MissionObjective.Kind.DELIVER:
+			base += " " + cur.destination_id
+		MissionObjective.Kind.SURVIVE:
+			base += " %ds" % int(cur.seconds)
+		MissionObjective.Kind.RACE_CHECKPOINT:
+			base += " #%d" % cur.checkpoint_index
+	return "%s (%d/%d)" % [base, mini(runtime.current_index, total), total]
 
 
 func _push_hud() -> void:
-	if _hud == null or runtime == null:
+	if _hud == null or runtime == null or runtime.definition == null:
 		return
-	_hud.show_objective(runtime.current_objective_label())
-	_hud.update_timer(runtime.remaining_seconds(), runtime.total_seconds())
+	_hud.show_objective(_objective_label())
+	var total_sec: float = runtime.definition.time_limit_sec
+	var remaining_sec: float = maxf(0.0, total_sec - runtime.elapsed_seconds)
+	_hud.update_timer(remaining_sec, total_sec)
 
 
 func _on_runtime_passed(id: String) -> void:

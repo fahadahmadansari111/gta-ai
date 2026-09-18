@@ -18,7 +18,7 @@ func _ready() -> void:
 	_wanted = WantedSystem.new()
 	_wanted.stars_changed.connect(_on_stars_changed)
 	_stars_label = get_node_or_null(stars_label_path) as Label
-	_refresh_display(_wanted.stars())
+	_refresh_display(_wanted.stars)
 
 
 func _process(delta: float) -> void:
@@ -37,7 +37,7 @@ func report_crime(severity: int) -> void:
 func current_stars() -> int:
 	if _wanted == null:
 		return 0
-	return _wanted.stars()
+	return _wanted.stars
 
 
 func _on_stars_changed(stars: int) -> void:

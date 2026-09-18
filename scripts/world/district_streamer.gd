@@ -37,19 +37,18 @@ func _process(delta: float) -> void:
 
 
 func poll(x: float, z: float) -> void:
-	var next: Array = _streamer.get_active_set(x, z, maxi(0, load_radius_chunks))
-	var diff: Dictionary = ChunkStreamer.diff(_active.keys(), next)
-	var to_load: Array = diff.get("to_load", [])
-	var to_unload: Array = diff.get("to_unload", [])
+	# ChunkStreamer works with Dictionary sets {Vector2i: true} (not Arrays).
+	var next: Dictionary = _streamer.get_active_set(x, z, maxi(0, load_radius_chunks))
+	var d: Dictionary = ChunkStreamer.diff(_active, next)
+	var to_load: Dictionary = d.get("to_load", {}) as Dictionary
+	var to_unload: Dictionary = d.get("to_unload", {}) as Dictionary
 	if to_load.is_empty() and to_unload.is_empty():
 		return
-	for id in to_load:
+	for id in to_load.keys():
 		_load_district(id)
-	for id in to_unload:
+	for id in to_unload.keys():
 		_unload_district(id)
-	_active.clear()
-	for id in next:
-		_active[id] = true
+	_active = next
 	districts_changed.emit(_active.keys())
 
 
