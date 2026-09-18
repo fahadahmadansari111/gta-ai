@@ -57,7 +57,7 @@ static func _spec_tick(w: Dictionary, dt: float, crime := false) -> void:
 		_spec_recalc(w)
 
 
-static func _spec_clear(w: Dictionary) -> void:
+static func _spec_reset(w: Dictionary) -> void:
 	w["heat"] = 0.0
 	w["level"] = 0
 
@@ -121,7 +121,7 @@ static func _spec_no_decay_while_crime(counts: Array) -> void:
 static func _spec_clear(counts: Array) -> void:
 	var w := _spec_new()
 	_spec_add(w, 300.0)
-	_spec_clear(w)
+	_spec_reset(w)
 	_check(counts, int(w["level"]) == 0 and float(w["heat"]) == 0.0, "spec clear resets")
 
 
