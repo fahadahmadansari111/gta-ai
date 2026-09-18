@@ -106,6 +106,24 @@ static func _spec_diff(counts: Array) -> void:
 	_check(counts, not missing_unload, "spec diff unloads every evicted chunk")
 
 
+static func _set_size(v: Variant) -> int:
+	# Real ChunkStreamer returns a Dictionary set {Vector2i: true};
+	# older revisions returned an Array. Accept both.
+	if v is Dictionary:
+		return (v as Dictionary).size()
+	if v is Array:
+		return (v as Array).size()
+	return -1
+
+
+static func _set_non_empty(v: Variant) -> bool:
+	if v is Dictionary:
+		return not (v as Dictionary).is_empty()
+	if v is Array:
+		return not (v as Array).is_empty()
+	return false
+
+
 static func _load_first(paths: Array):
 	for p in paths:
 		if ResourceLoader.exists(str(p)):
@@ -132,14 +150,14 @@ static func _real_checks(counts: Array) -> void:
 		print("  SKIP [chunk_streamer] real checks: need get_active_set(x, z, radius)")
 		return
 	var interior: Variant = s.call("get_active_set", 0.0, 0.0, 1)
-	_check(counts, interior is Array and (interior as Array).size() == 9, "real interior radius-1 set is 3x3")
+	_check(counts, _set_size(interior) == 9, "real interior radius-1 set is 3x3")
 	var single: Variant = s.call("get_active_set", 0.0, 0.0, 0)
-	_check(counts, single is Array and (single as Array).size() == 1, "real radius-0 set is a single chunk")
+	_check(counts, _set_size(single) == 1, "real radius-0 set is a single chunk")
 	if _arity(s, "diff") == 2:
 		var before: Variant = s.call("get_active_set", 0.0, 0.0, 1)
 		var after: Variant = s.call("get_active_set", 500.0, 500.0, 1)
 		var d: Variant = s.call("diff", before, after)
-		var ok := d is Dictionary and not ((d as Dictionary).get("to_load", []) as Array).is_empty() and not ((d as Dictionary).get("to_unload", []) as Array).is_empty()
+		var ok := d is Dictionary and _set_non_empty((d as Dictionary).get("to_load")) and _set_non_empty((d as Dictionary).get("to_unload"))
 		_check(counts, ok, "real diff reports loads and unloads on move")
 	else:
 		print("  SKIP [chunk_streamer] real diff check: no diff(old, new) found")

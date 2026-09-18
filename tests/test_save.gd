@@ -94,7 +94,7 @@ static func _real_checks(counts: Array) -> void:
 	_check(counts, svc.has("k") and svc.delete("k") and not svc.has("k"), "real delete removes key")
 	_check(counts, int(svc.load_value("missing", 42)) == 42, "real missing key returns default")
 	# Versioned envelope roundtrip + enforcement.
-	var data := SS.make_save_data(Vector3.ZERO, 500, "M01_Neon_Delivery")
+	var data = SS.make_save_data(Vector3.ZERO, 500, "M01_Neon_Delivery")
 	var saved = svc.save_game("slot", data)
 	_check(counts, saved.is_ok, "real save_game ok")
 	var loaded = svc.load_game("slot", 1)
